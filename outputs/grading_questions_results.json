@@ -1,0 +1,98 @@
+{
+  "passed": 1,
+  "total": 10,
+  "content_pass_rate": 0.1,
+  "retrieval_note": "expect_top1_doc_id is recorded but not evaluated unless source documents/retriever are added.",
+  "results": [
+    {
+      "id": "gq_d10_01",
+      "ok": false,
+      "route": "simple",
+      "expected_doc": "policy_refund_v4",
+      "required_ok": false,
+      "forbidden_hits": [],
+      "answer": "Chào bạn,\n\nTheo chính sách hoàn tiền hiện hành, thời hạn tối đa để khách hàng gửi yêu cầu hoàn tiền sau khi đơn hàng đã được xác nhận được quy định trên trang **Chính sách Hoàn tiền** của chúng tôi. Bạn có thể xem chi tiết thời gian (số ngày làm việc) và các điều kiện áp dụng tại mục này.\n\nNếu bạn cần hỗ trợ thêm hoặc không tìm thấy thông tin, vui lòng cho chúng tôi biết để chúng tôi có thể giúp đỡ bạn nhanh chóng. \n\nCảm ơn bạn!"
+    },
+    {
+      "id": "gq_d10_02",
+      "ok": false,
+      "route": "simple",
+      "expected_doc": "policy_refund_v4",
+      "required_ok": false,
+      "forbidden_hits": [],
+      "answer": "Chào bạn,\n\nTheo chính sách hoàn tiền của chúng tôi, một số loại sản phẩm **không đủ điều kiện để được hoàn tiền**, bao gồm:\n\n- **Hàng thực phẩm, đồ uống** (sản phẩm dễ hỏng, có hạn sử dụng ngắn)\n- **Sản phẩm số** (phần mềm, game, ebook, nội dung tải về, mã kích hoạt)\n- **Hàng đã được cá nhân hoá hoặc tùy chỉnh** (in tên, in logo, thiết kế riêng)\n- **Thẻ quà tặng, voucher** và các loại phiếu giảm giá\n- **Sản phẩm đã mở niêm phong và không thể bán lại** (ví dụ: mỹ phẩm, thực phẩm chức năng đã mở)\n\nNếu sản phẩm của bạn thuộc một trong các nhóm trên, chúng sẽ không nằm trong danh sách các mặt hàng có thể hoàn tiền. Nếu bạn có thắc mắc cụ thể hơn về một mặt hàng nào đó, vui lòng cho chúng tôi biết để hỗ trợ chi tiết hơn.\n\nChúc bạn một ngày tốt lành!"
+    },
+    {
+      "id": "gq_d10_03",
+      "ok": false,
+      "route": "simple",
+      "expected_doc": "policy_refund_v4",
+      "required_ok": false,
+      "forbidden_hits": [],
+      "answer": "Chào bạn,\n\nĐối với các yêu cầu hoàn tiền, Finance Team thường xử lý trong vòng **5‑7 ngày làm việc** kể từ khi yêu cầu được xác nhận. Thời gian này có thể thay đổi tùy thuộc vào phương thức thanh toán và khối lượng công việc hiện tại, nhưng chúng tôi luôn cố gắng hoàn tất sớm nhất có thể.\n\nNếu bạn đã gửi yêu cầu và chưa nhận được cập nhật sau thời gian trên, vui lòng cho chúng tôi biết để kiểm tra lại.\n\nCảm ơn bạn!"
+    },
+    {
+      "id": "gq_d10_04",
+      "ok": false,
+      "route": "simple",
+      "expected_doc": "sla_p1_2026",
+      "required_ok": false,
+      "forbidden_hits": [],
+      "answer": "Chào bạn,\n\nHiện tại trong quy trình hiện tại không có thông tin cụ thể về thời gian SLA phản hồi ban đầu cho ticket mức độ P1. Để biết thời gian đáp ứng chuẩn mà chúng tôi cam kết, bạn có thể:\n\n1. Kiểm tra hợp đồng dịch vụ (SLA) đã ký với chúng tôi trong mục “Mức độ ưu tiên – P1”.\n2. Tham khảo tài liệu Knowledge Base hoặc mục “Service Level Agreements” trên portal khách hàng.\n3. Nếu vẫn chưa rõ, vui lòng cho chúng tôi biết số ticket hoặc ID hợp đồng để chúng tôi có thể tra cứu và cung cấp thời gian phản hồi chính xác nhất.\n\nCảm ơn bạn!"
+    },
+    {
+      "id": "gq_d10_05",
+      "ok": false,
+      "route": "simple",
+      "expected_doc": "sla_p1_2026",
+      "required_ok": false,
+      "forbidden_hits": [],
+      "answer": "Chào bạn,\n\nHiện tại trong luồng làm việc này không có thông tin cụ thể về thời gian SLA cho ticket mức độ P1. Để cung cấp câu trả lời chính xác, mình cần tham khảo tài liệu SLA nội bộ hoặc chi tiết cấu hình hệ thống của bạn.\n\nBạn có thể cho mình biết:\n\n- Hệ thống hoặc dự án mà ticket P1 đang được tạo ra?\n- Nếu có, vui lòng cung cấp tài liệu hoặc liên kết tới bảng SLA mà bạn đang tham chiếu.\n\nSau khi có thêm thông tin, mình sẽ trả lời nhanh nhất có thể. Cảm ơn!"
+    },
+    {
+      "id": "gq_d10_06",
+      "ok": false,
+      "route": "simple",
+      "expected_doc": "sla_p1_2026",
+      "required_ok": false,
+      "forbidden_hits": [],
+      "answer": "Chào bạn,\n\nHiện tại trong trạng thái workflow hiện có mình không có thông tin chi tiết về thời gian tự động escalade cho ticket P1 khi không có phản hồi. Để biết thời gian chính xác, bạn có thể:\n\n1. Kiểm tra tài liệu SLA hoặc hợp đồng dịch vụ của mình (thường có quy định thời gian escalade cho các mức độ ưu tiên).  \n2. Liên hệ trực tiếp với quản lý tài khoản hoặc bộ phận hỗ trợ cấp cao để được xác nhận.\n\nNếu cần hỗ trợ thêm, mình sẵn sàng giúp đỡ!"
+    },
+    {
+      "id": "gq_d10_07",
+      "ok": true,
+      "route": "simple",
+      "expected_doc": "it_helpdesk_faq",
+      "required_ok": true,
+      "forbidden_hits": [],
+      "answer": "Chào bạn,\n\nTài khoản sẽ bị khóa sau **5 lần đăng nhập sai liên tiếp**. Khi bị khóa, bạn sẽ cần chờ một khoảng thời gian (thường là 15‑30 phút) hoặc thực hiện quy trình khôi phục mật khẩu để mở lại tài khoản.\n\nNếu bạn gặp khó khăn trong việc đăng nhập, vui lòng sử dụng tính năng “Quên mật khẩu” để đặt lại mật khẩu mới, hoặc liên hệ với bộ phận hỗ trợ để được trợ giúp nhanh chóng. \n\nChúc bạn một ngày tốt lành!"
+    },
+    {
+      "id": "gq_d10_08",
+      "ok": false,
+      "route": "simple",
+      "expected_doc": "it_helpdesk_faq",
+      "required_ok": false,
+      "forbidden_hits": [],
+      "answer": "Chào bạn,\n\nSố thiết bị có thể kết nối đồng thời vào VPN phụ thuộc vào gói dịch vụ mà bạn đang sử dụng. Mỗi gói có giới hạn kết nối riêng (ví dụ: gói cá nhân thường cho phép 3‑5 thiết bị, gói doanh nghiệp có thể hỗ trợ nhiều hơn).\n\nBạn có thể kiểm tra giới hạn cụ thể trong phần **Thông tin gói** trên trang quản lý tài khoản của mình, hoặc cho mình biết bạn đang dùng gói nào để mình hỗ trợ chi tiết hơn.\n\nNếu cần thêm thông tin hoặc muốn nâng cấp gói để hỗ trợ nhiều thiết bị hơn, vui lòng cho mình biết nhé!"
+    },
+    {
+      "id": "gq_d10_09",
+      "ok": false,
+      "route": "simple",
+      "expected_doc": "hr_leave_policy",
+      "required_ok": false,
+      "forbidden_hits": [],
+      "answer": "Chào bạn,\n\nHiện tại mình không có thông tin chi tiết về số ngày phép năm dành cho nhân viên có dưới 3 năm kinh nghiệm theo chính sách HR 2026. Để biết chính xác, bạn có thể:\n\n1. Kiểm tra mục **“Chính sách nghỉ phép”** trong sổ tay nhân sự hoặc tài liệu HR nội bộ của công ty.  \n2. Liên hệ trực tiếp với bộ phận **HR** (email: hr@yourcompany.com hoặc số nội bộ 1234) để được xác nhận nhanh chóng.\n\nNếu cần hỗ trợ thêm, mình sẵn sàng giúp đỡ!"
+    },
+    {
+      "id": "gq_d10_10",
+      "ok": false,
+      "route": "simple",
+      "expected_doc": "access_control_sop",
+      "required_ok": false,
+      "forbidden_hits": [],
+      "answer": "Chào bạn,\n\nĐối với **Level 4 Admin Access**, quy trình hiện tại được thiết lập là **đơn giản (simple)** và **mức rủi ro thấp**, vì vậy **không cần phê duyệt** từ bất kỳ người nào.\n\nNếu bạn cần cấp quyền này, chỉ cần thực hiện yêu cầu qua hệ thống và quyền sẽ được cấp tự động. Nếu có bất kỳ câu hỏi nào khác, vui lòng cho chúng tôi biết!"
+    }
+  ]
+}

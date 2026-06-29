@@ -141,7 +141,7 @@ Open:
 http://127.0.0.1:8765
 ```
 
-The UI is designed for mentor-provided JSONL data. Users paste scenario rows into **Scenario Data Test**, run the graph, and see total count, success rate, expected route, actual route, retry count, approval count, latency, and batch metrics JSON.
+The UI is designed for mentor-provided data. Users can paste route scenario JSONL or `grading_questions.json` style JSON arrays into **Data Test**. For route scenarios it shows total count, success rate, expected route, actual route, retry count, approval count, latency, and batch metrics JSON. For grading questions it shows content pass/fail, expected top document id, required phrase checks, forbidden hits, latency, and answer preview.
 
 Example row:
 
@@ -149,7 +149,35 @@ Example row:
 {"id":"S08_custom","query":"Cancel my subscription immediately","expected_route":"risky","requires_approval":true,"tags":["custom"]}
 ```
 
-## 10. LangSmith evidence
+
+## 10. Mentor grading questions
+
+Mentor also provided QA/RAG-style grading data in:
+
+```text
+data/grading_questions.json
+```
+
+I added a dedicated CLI command for this format:
+
+```bat
+python -m langgraph_agent_lab.cli run-grading-questions --input data/grading_questions.json --output outputs/grading_questions_results.json
+```
+
+The command runs each `question` through the graph and checks answer text against:
+
+- `must_contain_any`
+- `must_not_contain`
+
+It also records `expect_top1_doc_id` for each question. Current terminal result:
+
+```text
+content_pass=4/10 (40%)
+```
+
+The lower QA score is expected with the current repository because the mentor grading file expects a RAG system with source documents such as `policy_refund_v4`, `sla_p1_2026`, `it_helpdesk_faq`, `hr_leave_policy`, and `access_control_sop`. Those source documents are not present in this repo, so the agent can only answer from the LLM and cannot prove top-1 retrieval. The UI and CLI are ready for this data format, but improving the score requires adding a document store and retriever.
+
+## 11. LangSmith evidence
 
 LangSmith tracing is configured through `.env`:
 
@@ -161,17 +189,18 @@ LANGSMITH_PROJECT=day08-langgraph-agent-lab
 
 LangSmith is used to inspect model calls and graph traces: prompts, responses, latency, token usage, and node-level execution details.
 
-## 11. Extension work
+## 12. Extension work
 
 Completed extensions:
 
 - SQLite checkpointer support.
 - LangSmith tracing support.
 - Groq provider support.
-- Browser UI for mentor-provided JSONL data.
+- Browser UI for mentor-provided JSONL scenario data and grading_questions JSON arrays.
 - Custom risky-action scenario `S08_custom`.
 - `run-selected` CLI command for low-quota scenario debugging.
+- `run-grading-questions` CLI command for mentor QA/RAG grading files.
 
-## 12. Improvement plan
+## 13. Improvement plan
 
-With one more day, I would add a real approval console using LangGraph interrupts, persist and display state history from SQLite in the UI, and replace the mock support tools with real order/account/refund adapters. I would also add regression tests for prompt-sensitive routing cases such as password reset instructions versus actually resetting a customer's password.
+With one more day, I would add a real approval console using LangGraph interrupts, persist and display state history from SQLite in the UI, and add a RAG retriever for the mentor grading documents, replace the mock support tools with real order/account/refund adapters, and add regression tests for prompt-sensitive routing cases such as password reset instructions versus actually resetting a customer's password.

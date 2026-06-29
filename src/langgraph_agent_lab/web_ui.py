@@ -10,6 +10,7 @@ import html
 import json
 import socket
 import time
+import unicodedata
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import parse_qs
@@ -148,13 +149,13 @@ HTML_PAGE = """<!doctype html>
   <div class="layout">
     <div class="stack">
       <section>
-        <h2>Scenario Data Test</h2>
-        <div class="note">Paste JSONL data here. Each line must be one JSON object with id, query, expected_route, and optional requires_approval/max_attempts/tags.</div>
+        <h2>Data Test</h2>
+        <div class="note">Paste mentor data here. The UI accepts route scenario JSONL or grading_questions JSON arrays with question, must_contain_any, must_not_contain, and expect_top1_doc_id.</div>
         <form method="post" action="/batch">
-          <label for="scenario_data" style="margin-top:12px">Scenario JSONL</label>
+          <label for="scenario_data" style="margin-top:12px">Scenario JSONL or grading_questions JSON</label>
           <textarea class="data-box" id="scenario_data" name="scenario_data" required>__SCENARIO_DATA__</textarea>
           <div class="actions">
-            <button type="submit">Run Scenario Data</button>
+            <button type="submit">Run Data</button>
             <button class="secondary" type="button" onclick="document.getElementById('scenario_data').value = sampleData">Load Sample Data</button>
           </div>
         </form>
@@ -217,6 +218,39 @@ def _parse_jsonl(payload: str) -> list[Scenario]:
     return scenarios
 
 
+def _normalize_text(value: str) -> str:
+    text = unicodedata.normalize("NFKD", value.casefold())
+    return "".join(char for char in text if not unicodedata.combining(char))
+
+
+def _parse_grading_questions(payload: str) -> list[dict[str, Any]]:
+    data = json.loads(payload)
+    if not isinstance(data, list):
+        raise ValueError("grading_questions data must be a JSON array.")
+    questions: list[dict[str, Any]] = []
+    for index, item in enumerate(data, start=1):
+        if not isinstance(item, dict):
+            raise ValueError(f"Question #{index} must be a JSON object.")
+        if "id" not in item or "question" not in item:
+            raise ValueError(f"Question #{index} must include id and question.")
+        questions.append(item)
+    if not questions:
+        raise ValueError("Paste at least one grading question.")
+    return questions
+
+
+def _matches_required(answer: str, phrases: list[str]) -> bool:
+    if not phrases:
+        return True
+    normalized_answer = _normalize_text(answer)
+    return any(_normalize_text(phrase) in normalized_answer for phrase in phrases)
+
+
+def _forbidden_hits(answer: str, phrases: list[str]) -> list[str]:
+    normalized_answer = _normalize_text(answer)
+    return [phrase for phrase in phrases if _normalize_text(phrase) in normalized_answer]
+
+
 def _event_html(events: list[dict[str, Any]]) -> str:
     if not events:
         return '<p class="muted">Run a ticket or scenario batch to see node events.</p>'
@@ -269,6 +303,75 @@ def _single_result_html(state: dict[str, Any] | None, error: str | None, latency
     """
 
 
+def _grading_questions_result_html(payload: str) -> tuple[str, list[dict[str, Any]]]:
+    questions = _parse_grading_questions(payload)
+    rows = []
+    events: list[dict[str, Any]] = []
+    passed = 0
+    total_latency = 0
+
+    for item in questions:
+        scenario = Scenario(
+            id=str(item["id"]),
+            query=str(item["question"]),
+            expected_route="simple",
+            requires_approval=False,
+        )
+        final_state, latency_ms = _run_scenario(scenario)
+        total_latency += latency_ms
+        events.extend(final_state.get("events", []))
+        answer = str(final_state.get("final_answer") or final_state.get("pending_question") or "")
+        required = [str(value) for value in item.get("must_contain_any", [])]
+        forbidden = [str(value) for value in item.get("must_not_contain", [])]
+        required_ok = _matches_required(answer, required)
+        forbidden_found = _forbidden_hits(answer, forbidden)
+        content_ok = required_ok and not forbidden_found
+        passed += 1 if content_ok else 0
+        status = "yes" if content_ok else "no"
+        klass = "yes" if content_ok else "no"
+        expected_doc = html.escape(str(item.get("expect_top1_doc_id", "")))
+        answer_preview = html.escape(answer[:240] + ("..." if len(answer) > 240 else ""))
+        required_text = html.escape(" | ".join(required))
+        forbidden_text = html.escape(" | ".join(forbidden_found) if forbidden_found else "-")
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(item['id']))}</td>"
+            f"<td><span class=\"pill {klass}\">{status}</span></td>"
+            f"<td>{expected_doc}</td>"
+            f"<td>{required_text}</td>"
+            f"<td>{forbidden_text}</td>"
+            f"<td>{latency_ms} ms</td>"
+            f"<td>{answer_preview}</td>"
+            "</tr>"
+        )
+
+    pass_rate = passed / len(questions)
+    avg_latency = int(total_latency / len(questions)) if questions else 0
+    raw = html.escape(json.dumps({
+        "total_questions": len(questions),
+        "content_pass_rate": pass_rate,
+        "passed": passed,
+        "retrieval_note": "expect_top1_doc_id is displayed but not evaluated because source documents are not included in this repo.",
+    }, indent=2, ensure_ascii=False))
+    result = f"""
+    <div class="result">
+      <div class="note">Detected grading_questions JSON. Content checks use must_contain_any and must_not_contain. Top-1 retrieval doc ids are shown for reference; source documents are required to evaluate retrieval.</div>
+      <div class="stats">
+        <div class="stat"><span>Total questions</span><strong>{len(questions)}</strong></div>
+        <div class="stat"><span>Content pass rate</span><strong>{pass_rate:.0%}</strong></div>
+        <div class="stat"><span>Passed</span><strong>{passed}</strong></div>
+        <div class="stat"><span>Avg latency</span><strong>{avg_latency} ms</strong></div>
+      </div>
+      <table>
+        <thead><tr><th>ID</th><th>Content</th><th>Expected top doc</th><th>Must contain any</th><th>Forbidden found</th><th>Latency</th><th>Answer preview</th></tr></thead>
+        <tbody>{''.join(rows)}</tbody>
+      </table>
+      <details><summary>Grading summary JSON</summary><pre>{raw}</pre></details>
+    </div>
+    """
+    return result, events
+
+
 def _batch_result_html(payload: str | None, error: str | None) -> tuple[str, list[dict[str, Any]]]:
     if payload is None and error is None:
         return "", []
@@ -276,6 +379,9 @@ def _batch_result_html(payload: str | None, error: str | None) -> tuple[str, lis
         return _error_html(error), []
 
     assert payload is not None
+    if payload.lstrip().startswith("["):
+        return _grading_questions_result_html(payload)
+
     scenarios = _parse_jsonl(payload)
     metrics = []
     final_states = []

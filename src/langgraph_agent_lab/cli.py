@@ -10,6 +10,7 @@ import typer
 import yaml
 
 from .graph import build_graph
+from .grading_questions import run_grading_questions, write_grading_results
 from .llm import load_dotenv
 from .metrics import MetricsReport, metric_from_state, summarize_metrics, write_metrics
 from .persistence import build_checkpointer
@@ -77,6 +78,22 @@ def run_selected(
     typer.echo(f"Wrote selected metrics to {output}")
 
 
+
+@app.command("run-grading-questions")
+def run_grading_questions_command(
+    input_path: Annotated[Path, typer.Option("--input")] = Path("data/grading_questions.json"),
+    output: Annotated[Path, typer.Option("--output")] = Path("outputs/grading_questions_results.json"),
+    checkpointer: Annotated[str, typer.Option("--checkpointer")] = "memory",
+) -> None:
+    """Run mentor-provided QA/RAG grading questions and write content-check results."""
+    load_dotenv()
+    report = run_grading_questions(input_path, checkpointer_kind=checkpointer)
+    write_grading_results(report, output)
+    typer.echo(
+        f"Grading questions content_pass={report['passed']}/{report['total']} "
+        f"({report['content_pass_rate']:.2%})"
+    )
+    typer.echo(f"Wrote grading question results to {output}")
 @app.command("validate-metrics")
 def validate_metrics(metrics: Annotated[Path, typer.Option("--metrics")]) -> None:
     """Validate metrics JSON schema for grading."""

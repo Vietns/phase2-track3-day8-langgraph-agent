@@ -146,6 +146,41 @@ python -m langgraph_agent_lab.cli run-selected S01_simple S08_custom --output ou
 
 `metrics_selected.json` is for local debugging only. The grading validator expects at least 6 scenarios, so use `outputs/metrics.json` for final validation.
 
+
+## Run Mentor Grading Questions
+
+Mentor may provide QA/RAG-style grading data in:
+
+```text
+data/grading_questions.json
+```
+
+Run it with:
+
+```bat
+python -m langgraph_agent_lab.cli run-grading-questions --input data/grading_questions.json --output outputs/grading_questions_results.json
+```
+
+Or use defaults:
+
+```bat
+python -m langgraph_agent_lab.cli run-grading-questions
+```
+
+This command checks:
+
+- whether the answer contains at least one phrase from `must_contain_any`
+- whether the answer avoids phrases in `must_not_contain`
+- records `expect_top1_doc_id` for reference
+
+Current terminal result:
+
+```text
+Grading questions content_pass=4/10 (40.00%)
+```
+
+Important: `expect_top1_doc_id` is a retrieval/RAG criterion. This repo does not include the source documents such as `policy_refund_v4`, `sla_p1_2026`, `it_helpdesk_faq`, `hr_leave_policy`, or `access_control_sop`, so the command records expected doc ids but does not evaluate true top-1 retrieval. To raise this score, add those documents and a retriever.
+
 ## Browser UI For Mentor Data
 
 Start the local UI:
@@ -160,7 +195,9 @@ Open:
 http://127.0.0.1:8765
 ```
 
-The UI is designed for mentor-provided data. Paste JSONL into **Scenario Data Test**. Each line must be one JSON object:
+The UI is designed for mentor-provided data. It accepts route scenario JSONL and `grading_questions.json` style JSON arrays. Paste data into **Data Test** and run it.
+
+For scenario JSONL, each line must be one JSON object:
 
 ```jsonl
 {"id":"S08_custom","query":"Cancel my subscription immediately","expected_route":"risky","requires_approval":true,"tags":["custom"]}
@@ -175,6 +212,8 @@ The UI shows:
 - approval count
 - latency
 - batch metrics JSON
+
+For `grading_questions.json`, the UI shows content pass/fail, expected top document id, required phrase checks, forbidden phrase hits, latency, and answer preview.
 
 ## Scenario Format
 
