@@ -1,246 +1,264 @@
-# Day 08 Lab — LangGraph Agentic Orchestration
+# Day 08 Lab - LangGraph Agentic Orchestration
 
-Build a production-style LangGraph workflow for a support-ticket agent with state management, conditional routing, retry loops, human-in-the-loop approval, persistence, and metrics.
+Production-style LangGraph workflow for a support-ticket agent with typed state, conditional routing, retry loops, human-in-the-loop approval, persistence hooks, metrics, LangSmith tracing, and a local UI for testing mentor-provided JSONL scenario data.
 
-This is a **starter skeleton**. All node implementations, routing logic, and graph wiring are left as `TODO(student)` — you must build them from scratch.
+## What Is Implemented
 
----
+- Typed `AgentState` with append-only audit fields and overwrite fields for routing state.
+- LLM-based `classify_node` using structured output.
+- LLM-based `answer_node` using grounded context from tool results, approval, query, and errors.
+- Mock `tool_node` with transient error simulation.
+- `evaluate_node` retry gate using tool-result quality heuristics.
+- Risky-action preparation and mock approval/HITL path.
+- Bounded retry and dead-letter handling.
+- Complete LangGraph wiring with all terminal paths going through `finalize -> END`.
+- Memory and SQLite checkpointer support.
+- Metrics generation to `outputs/metrics.json`.
+- Report generation to `reports/lab_report.md`.
+- Browser UI for pasting scenario JSONL and running the graph.
 
-## How you will be graded
+## Current Result
 
-| Category | Points | What we look for |
-|---|---:|---|
-| Architecture & state schema | 15 | Typed state with correct reducers, student-added fields, lean serializable state |
-| Graph construction & wiring | 15 | All nodes registered, edges correct, conditional edges work, graph compiles |
-| LLM integration | 15 | classify_node + answer_node use real LLM calls (structured output, grounded generation) |
-| Graph behavior | 20 | All scenario routes correct, bounded retry loop, HITL approval path, all routes terminate |
-| Persistence & recovery | 10 | Checkpointer wired, thread_id per run, state history or crash-resume evidence |
-| Metrics & tests | 15 | `metrics.json` valid, scenario coverage, tests pass, meaningful counts |
-| Report & demo | 10 | Architecture explanation, metrics table, failure analysis, improvement ideas |
+Latest local validation:
 
-**Grade bands:**
-- **90–100**: Production-quality graph + LLM integration + metrics + report + at least one bonus extension
-- **75–89**: Core graph works with LLM, metrics valid, report explains trade-offs
-- **60–74**: Graph mostly works but LLM integration, persistence, or report incomplete
-- **< 60**: Does not run, hard-codes scenarios, or lacks LLM integration/metrics/report
+```text
+Metrics valid. success_rate=100.00%
+```
 
-> **Critical rule**: Do NOT hard-code answers to specific scenario queries. Your graph must route based on **LLM classification and state logic**, not by matching exact scenario IDs. We grade with additional hidden scenarios.
+The sample data currently contains 8 scenarios, including the custom `S08_custom` cancellation scenario.
 
----
+## Project Structure
 
-## LLM Integration Requirements
+```text
+src/langgraph_agent_lab/
+  cli.py          # run-scenarios, run-selected, validate-metrics
+  graph.py        # LangGraph StateGraph construction
+  llm.py          # LLM provider factory and .env loader
+  nodes.py        # graph node implementations
+  routing.py      # conditional edge routing functions
+  state.py        # typed state, scenario model, events
+  metrics.py      # metrics schema and summarization
+  persistence.py  # memory/sqlite checkpointer adapter
+  report.py       # markdown report renderer
+  web_ui.py       # local browser UI for JSONL scenario data
 
-This lab requires real LLM API calls in specific nodes:
+data/sample/scenarios.jsonl
+outputs/metrics.json
+reports/lab_report.md
+```
 
-| Node | Requirement | Pattern |
-|---|---|---|
-| `classify_node` | **MUST use LLM** | Structured output (`.with_structured_output()`) for intent classification |
-| `answer_node` | **MUST use LLM** | Grounded response generation using tool_results/context |
-| `evaluate_node` | **SHOULD use LLM** (bonus) | LLM-as-judge to evaluate tool results quality |
+## Setup On Windows
 
-A helper is provided in `src/langgraph_agent_lab/llm.py` — it reads your API key from `.env` and returns a LangChain chat model.
+From the repository root:
+
+```bat
+python -m venv .venv
+.venv\Scripts\activate
+python -m pip install --upgrade pip
+pip install -e ".[dev,groq]"
+```
+
+Alternative providers:
+
+```bat
+pip install -e ".[dev,google]"
+pip install -e ".[dev,openai]"
+pip install -e ".[dev,anthropic]"
+```
+
+Windows note: use double quotes, for example `".[dev,groq]"`. Do not use Linux-style single quotes in `cmd`.
+
+## Configure `.env`
+
+Create the file:
+
+```bat
+copy .env.example .env
+```
+
+Recommended Groq configuration:
+
+```env
+GROQ_API_KEY=gsk_...
+LLM_MODEL=openai/gpt-oss-120b
+```
+
+Optional LangSmith tracing:
+
+```env
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=lsv2_...
+LANGSMITH_PROJECT=day08-langgraph-agent-lab
+```
+
+LangSmith is for tracing/debugging runs. It is not a model provider key. You still need `GROQ_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`, or `ANTHROPIC_API_KEY`.
+
+## Verify LLM Provider
+
+```bat
+python -c "from langgraph_agent_lab.llm import get_llm; print(get_llm())"
+```
+
+Expected with Groq: a `ChatGroq` model object.
+
+## Run Tests
+
+```bat
+pytest
+```
+
+Expected offline result:
+
+```text
+19 passed, 6 skipped
+```
+
+The skipped tests are LLM smoke tests that depend on API-key visibility and network access.
+
+## Run Scenarios And Validate
+
+```bat
+python -m langgraph_agent_lab.cli run-scenarios --config configs/lab.yaml --output outputs/metrics.json
+python -m langgraph_agent_lab.cli validate-metrics --metrics outputs/metrics.json
+```
+
+This writes:
+
+- `outputs/metrics.json`
+- `reports/lab_report.md`
+
+Equivalent Makefile commands on Unix-like shells:
 
 ```bash
-# Install your preferred LLM provider
-pip install langchain-openai    # for OpenAI
-# OR
-pip install langchain-anthropic  # for Anthropic
-
-# Configure .env
-cp .env.example .env
-# Edit .env and set OPENAI_API_KEY or ANTHROPIC_API_KEY
+make run-scenarios
+make grade-local
 ```
 
----
+On Windows without `make`, use the Python commands above.
 
-## Understanding `scenarios.jsonl`
+## Run Selected Scenarios
 
-The file `data/sample/scenarios.jsonl` contains **7 sample scenarios** your graph must handle:
+To save LLM calls while testing specific rows:
 
-```jsonl
-{"id":"S01_simple",      "query":"How do I reset my password?",                          "expected_route":"simple"}
-{"id":"S02_tool",        "query":"Please lookup order status for order 12345",            "expected_route":"tool"}
-{"id":"S03_missing",     "query":"Can you fix it?",                                      "expected_route":"missing_info"}
-{"id":"S04_risky",       "query":"Refund this customer and send confirmation email",      "expected_route":"risky"}
-{"id":"S05_error",       "query":"Timeout failure while processing request",              "expected_route":"error"}
-{"id":"S06_delete",      "query":"Delete customer account after support verification",    "expected_route":"risky"}
-{"id":"S07_dead_letter", "query":"System failure cannot recover after multiple attempts", "expected_route":"error", "max_attempts":1}
+```bat
+python -m langgraph_agent_lab.cli run-selected S01_simple S08_custom --output outputs/metrics_selected.json
 ```
 
-### What each field means
+`metrics_selected.json` is for local debugging only. The grading validator expects at least 6 scenarios, so use `outputs/metrics.json` for final validation.
 
-| Field | Purpose |
-|---|---|
-| `id` | Unique scenario identifier — used in metrics output |
-| `query` | The user's support-ticket text — input to your graph |
-| `expected_route` | Which route your `classify_node` should pick: `simple`, `tool`, `missing_info`, `risky`, or `error` |
-| `requires_approval` | If `true`, your graph must hit the approval/HITL node before answering |
-| `should_retry` | If `true`, scenario simulates transient tool failure requiring retry |
-| `max_attempts` | Override retry limit (default 3). S07 sets this to 1, so it exhausts retries immediately → dead letter |
-| `tags` | Descriptive labels for your reference |
+## Browser UI For Mentor Data
 
-### How scenarios flow through your code
+Start the local UI:
 
-```
-scenarios.jsonl  →  scenarios.py loads them  →  cli.py runs each through your graph
-                                              →  metrics.py collects results
-                                              →  outputs/metrics.json
+```bat
+python -m langgraph_agent_lab.web_ui
 ```
 
-1. `make run-scenarios` reads `data/sample/scenarios.jsonl`
-2. For each scenario, it calls `initial_state(scenario)` → `graph.invoke(state)`
-3. After execution, it checks: did `actual_route` match `expected_route`? Did HITL fire when required?
-4. Results go to `outputs/metrics.json`
+Open:
 
-### How to design your classification
+```text
+http://127.0.0.1:8765
+```
 
-Your `classify_node` should use an LLM to classify intent. Design a prompt that routes queries:
-
-| Route | Intent |
-|---|---|
-| `risky` | Actions with side effects: refunds, deletions, sending emails, cancellations |
-| `tool` | Information lookups: order status, tracking, search queries |
-| `missing_info` | Vague/incomplete queries lacking actionable context |
-| `error` | System failures: timeouts, crashes, service unavailable |
-| `simple` | General questions answerable without tools or actions |
-
-**Priority matters**: risky > tool > missing_info > error > simple. Design your LLM prompt to respect this priority.
-
-### Adding your own test scenarios
-
-You can add extra lines to `scenarios.jsonl` to test edge cases:
+The UI is designed for mentor-provided data. Paste JSONL into **Scenario Data Test**. Each line must be one JSON object:
 
 ```jsonl
 {"id":"S08_custom","query":"Cancel my subscription immediately","expected_route":"risky","requires_approval":true,"tags":["custom"]}
 ```
 
-The grading script will also test with scenarios you haven't seen.
+The UI shows:
 
----
+- total scenarios
+- success rate
+- expected route vs actual route
+- retry count
+- approval count
+- latency
+- batch metrics JSON
 
-## Quick start
+## Scenario Format
 
-```bash
-# Option A: conda
-conda activate ai-lab
-pip install -e '.[dev]'
-pip install langchain-openai  # or langchain-anthropic
+Required fields:
 
-# Option B: venv
-python -m venv .venv
-source .venv/bin/activate
-pip install -e '.[dev]'
-pip install langchain-openai  # or langchain-anthropic
+| Field | Meaning |
+|---|---|
+| `id` | unique scenario id |
+| `query` | support-ticket text |
+| `expected_route` | `simple`, `tool`, `missing_info`, `risky`, or `error` |
 
-# Configure LLM
-cp .env.example .env
-# Edit .env — set your API key
+Optional fields:
 
-# Verify setup
-make test  # some tests will fail until you implement TODOs
+| Field | Meaning |
+|---|---|
+| `requires_approval` | whether risky/HITL path must be observed |
+| `should_retry` | marks retry-oriented cases for reference |
+| `max_attempts` | retry limit, default `3` |
+| `tags` | labels for reporting/debugging |
+
+## Route Behavior
+
+| Route | Intent | Main path |
+|---|---|---|
+| `simple` | general help/how-to question | `answer -> finalize` |
+| `tool` | lookup/status/search request | `tool -> evaluate -> answer -> finalize` |
+| `missing_info` | vague request | `clarify -> finalize` |
+| `risky` | side-effecting request like refund/delete/cancel/email | `risky_action -> approval -> tool -> evaluate -> answer -> finalize` |
+| `error` | timeout/failure/crash/unavailable service | `retry -> tool/evaluate loop` or `dead_letter -> finalize` |
+
+## LangSmith
+
+With tracing enabled in `.env`, runs appear in LangSmith under project:
+
+```text
+day08-langgraph-agent-lab
 ```
 
----
+Use LangSmith to inspect prompts, model outputs, latency, token usage, and node-level traces.
 
-## Step-by-step workflow
+## Troubleshooting
 
-### Phase 1: State + nodes (0–90 min) — worth 30 points
+### `make` is not recognized
 
-1. **`state.py`** — Review existing fields. Add missing fields as you discover them:
-   - `evaluation_result` for retry loop gate
-   - `pending_question` for clarification flow
-   - `proposed_action` for risky action flow
-   - `approval` for HITL decisions
+Use direct Python commands:
 
-2. **`llm.py`** — Review the helper. Configure `.env` with your API key.
+```bat
+pytest
+python -m langgraph_agent_lab.cli run-scenarios --config configs/lab.yaml --output outputs/metrics.json
+python -m langgraph_agent_lab.cli validate-metrics --metrics outputs/metrics.json
+```
 
-3. **`nodes.py`** — Implement all 10 node functions:
-   - `classify_node`: **LLM + structured output** for intent classification
-   - `tool_node`: mock tool with error simulation
-   - `evaluate_node`: tool result quality check (LLM-as-judge for bonus)
-   - `answer_node`: **LLM-generated** grounded response
-   - `ask_clarification_node`: generate clarification question
-   - `risky_action_node`: prepare action for approval
-   - `approval_node`: mock approval with optional interrupt()
-   - `retry_or_fallback_node`: increment attempt counter
-   - `dead_letter_node`: handle max retry exhaustion
-   - `finalize_node`: emit final audit event
+### `source` is not recognized
 
-### Phase 2: Routing + graph (90–150 min) — worth 35 points
+On Windows `cmd`, activate the venv with:
 
-4. **`routing.py`** — Implement all 4 routing functions from scratch
-5. **`graph.py`** — Build the complete StateGraph:
-   - Import and register all 11 nodes
-   - Wire fixed + conditional edges
-   - All paths must terminate at finalize → END
-6. **Verify**: `make test` and `make run-scenarios`
+```bat
+.venv\Scripts\activate
+```
 
-### Phase 3: Persistence (150–180 min) — worth 10 points
+### `ModuleNotFoundError: langchain_groq`
 
-7. **`persistence.py`** — Implement SQLite checkpointer
-   - Show evidence: thread_id per run, state history, or crash-resume
+Install Groq support inside the active `.venv`:
 
-### Phase 4: Metrics & report (180–240 min) — worth 25 points
+```bat
+pip install -e ".[dev,groq]"
+```
 
-8. **`report.py`** — Implement `render_report()` from metrics data
-9. **Run**: `make run-scenarios` → `outputs/metrics.json`
-10. **Validate**: `make grade-local`
-11. **Report**: Fill `reports/lab_report.md`
+### Gemini `429 RESOURCE_EXHAUSTED`
 
-### Phase 5: Extensions (240+ min) — push toward 90+
+The Gemini free-tier quota is exhausted. Use Groq/OpenAI/Anthropic, wait for quota reset, or switch to a lighter Gemini model.
 
-Pick one or more:
-- **Parallel fan-out**: Use `Send()` for concurrent tool calls
-- **Real HITL**: `LANGGRAPH_INTERRUPT=true` with `interrupt()`
-- **Streamlit UI**: Build approval/reject interface
-- **Time travel**: `get_state_history()` replay
-- **Crash recovery**: SQLite checkpoint survives process kill
-- **Graph diagram**: `graph.get_graph().draw_mermaid()`
+### `WinError 10061`
 
----
+A local server or outbound API connection was refused. Restart the UI if the browser cannot connect, or check VPN/proxy/firewall if LLM calls fail.
 
-## Make commands
+## Submission Checklist
 
-| Command | What it does |
-|---|---|
-| `make install` | Install project + dev dependencies |
-| `make test` | Run pytest |
-| `make lint` | Run ruff linter |
-| `make typecheck` | Run mypy type checker |
-| `make run-scenarios` | Execute all scenarios → `outputs/metrics.json` |
-| `make grade-local` | Validate metrics.json schema |
-| `make clean` | Remove caches and generated files |
-
----
-
-## Submission checklist
-
-- [ ] All `TODO(student)` sections implemented
-- [ ] `.env` configured with LLM API key
-- [ ] `classify_node` uses real LLM call with structured output
-- [ ] `answer_node` uses real LLM call for grounded responses
-- [ ] `make test` passes
-- [ ] `make run-scenarios` generates valid `outputs/metrics.json`
-- [ ] `make grade-local` passes validation
-- [ ] `reports/lab_report.md` completed with architecture, metrics, and analysis
-- [ ] Can explain at least one route and one failure mode during demo
-
-**For 90+ points, also include:**
-- [ ] At least one bonus extension (persistence, parallel fan-out, HITL, time travel, diagram)
-- [ ] Evidence of extension in report (screenshot, log output, or diagram)
-
----
-
-## Common pitfalls
-
-1. **Missing state fields**: The starter intentionally omits some fields from `AgentState`. You must add `evaluation_result`, `pending_question`, `proposed_action`, and `approval` as you implement nodes that need them.
-
-2. **LLM structured output**: Use `.with_structured_output(YourModel)` to get reliable classification. Raw text parsing is fragile and will fail on hidden test scenarios.
-
-3. **Unbounded retry**: Always check `attempt < max_attempts` in `route_after_retry`. Without this bound, error scenarios loop forever.
-
-4. **Graph wiring**: Every path must end at `finalize → END`. Missing this means the graph hangs for some scenarios.
-
-5. **SqliteSaver API**: In `langgraph-checkpoint-sqlite` 3.x, use `SqliteSaver(conn=sqlite3.connect(...))` not `SqliteSaver.from_conn_string()`.
-
-6. **API key not set**: If you get "No LLM API key found", check your `.env` file and make sure it's loaded (use `python-dotenv` or export manually).
+- [x] All `TODO(student)` sections implemented
+- [x] `.env` configured with LLM API key
+- [x] `pytest` passes
+- [x] `run-scenarios` writes `outputs/metrics.json`
+- [x] `validate-metrics` validates metrics
+- [x] `reports/lab_report.md` completed
+- [x] `classify_node` uses real LLM structured output
+- [x] `answer_node` uses real LLM grounded generation
+- [x] Demo route and failure mode documented

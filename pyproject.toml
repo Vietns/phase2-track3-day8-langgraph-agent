@@ -24,6 +24,7 @@ dev = [
   "mypy>=1.10",
 ]
 google = ["langchain-google-genai>=2.1.0"]
+groq = ["langchain-groq>=0.2.0"]
 openai = ["langchain-openai>=0.3.0"]
 anthropic = ["langchain-anthropic>=0.3.0"]
 sqlite = ["langgraph-checkpoint-sqlite>=2.0"]
@@ -31,6 +32,7 @@ postgres = ["langgraph-checkpoint-postgres>=2.0"]
 
 [project.scripts]
 agent-lab = "langgraph_agent_lab.cli:app"
+agent-lab-ui = "langgraph_agent_lab.web_ui:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
